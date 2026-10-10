@@ -221,15 +221,16 @@ local function CreateReputationView(parentFrame)
     container.LeftArea = leftArea
     
     -- Top Control Bar (Search Input + Expand/Collapse All + Summary)
+    -- Positioned at y = -52 to completely clear the top-left circular portrait ring
     local topBar = CreateFrame("Frame", "OnePanel_ReputationTopBar", leftArea)
-    topBar:SetPoint("TOPLEFT", leftArea, "TOPLEFT", 6, -6)
-    topBar:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -38, -6)
-    topBar:SetHeight(28)
+    topBar:SetPoint("TOPLEFT", leftArea, "TOPLEFT", 10, -52)
+    topBar:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -10, -52)
+    topBar:SetHeight(26)
     
     -- Search EditBox
     local searchBox = CreateFrame("EditBox", "OnePanel_ReputationSearchBox", topBar, "InputBoxTemplate")
-    searchBox:SetSize(160, 22)
-    searchBox:SetPoint("LEFT", topBar, "LEFT", 4, 0)
+    searchBox:SetSize(140, 22)
+    searchBox:SetPoint("LEFT", topBar, "LEFT", 2, 0)
     searchBox:SetAutoFocus(false)
     searchBox:SetMaxLetters(40)
     
@@ -271,7 +272,7 @@ local function CreateReputationView(parentFrame)
     
     -- Collapse / Expand All Button
     local toggleAllBtn = CreateSilverActionButton(topBar, "OnePanel_ReputationToggleAllBtn", "Collapse All")
-    toggleAllBtn:SetSize(90, 22)
+    toggleAllBtn:SetSize(86, 22)
     toggleAllBtn:SetPoint("LEFT", searchBox, "RIGHT", 6, 0)
     
     local allCollapsed = false
@@ -300,13 +301,13 @@ local function CreateReputationView(parentFrame)
     
     -- Scroll View Container for Factions
     local scrollFrame = CreateFrame("ScrollFrame", "OnePanel_ReputationScrollFrame", leftArea, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", topBar, "BOTTOMLEFT", 0, -6)
+    scrollFrame:SetPoint("TOPLEFT", topBar, "BOTTOMLEFT", 0, -8)
     scrollFrame:SetPoint("BOTTOMRIGHT", leftArea, "BOTTOMRIGHT", -6, 8)
     scrollFrame:EnableMouseWheel(true)
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
         local cur = self:GetVerticalScroll()
         local maxScroll = self:GetVerticalScrollRange()
-        local step = 32
+        local step = 42
         self:SetVerticalScroll(math.max(0, math.min(maxScroll, cur - (delta * step))))
     end)
     
@@ -316,21 +317,21 @@ local function CreateReputationView(parentFrame)
         scrollBar:ClearAllPoints()
         scrollBar:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", -2, -18)
         scrollBar:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -2, 18)
-        scrollBar:SetValueStep(32)
+        scrollBar:SetValueStep(42)
         
         local upBtn = _G[scrollBarName .. "ScrollUpButton"]
         local downBtn = _G[scrollBarName .. "ScrollDownButton"]
         if upBtn then
             upBtn:SetScript("OnClick", function()
                 local cur = scrollFrame:GetVerticalScroll()
-                scrollFrame:SetVerticalScroll(math.max(0, cur - 32))
+                scrollFrame:SetVerticalScroll(math.max(0, cur - 42))
             end)
         end
         if downBtn then
             downBtn:SetScript("OnClick", function()
                 local cur = scrollFrame:GetVerticalScroll()
                 local maxScroll = scrollFrame:GetVerticalScrollRange()
-                scrollFrame:SetVerticalScroll(math.min(maxScroll, cur + 32))
+                scrollFrame:SetVerticalScroll(math.min(maxScroll, cur + 42))
             end)
         end
     end
@@ -360,10 +361,10 @@ local function CreateReputationView(parentFrame)
     vDivider:SetPoint("BOTTOM", leftArea, "BOTTOMRIGHT", 1, -14)
     container.VerticalDivider = vDivider
     
-    -- Native Right-Side Collapse / Expand Toggle Button
+    -- Native Right-Side Collapse / Expand Toggle Button (Matches Character tab position)
     local toggleBtn = CreateFrame("Button", "OnePanel_ReputationSideToggleButton", leftArea)
     toggleBtn:SetSize(28, 28)
-    toggleBtn:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -8, -6)
+    toggleBtn:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -14, -18)
     toggleBtn:SetFrameLevel(510)
     
     local toggleIcon = toggleBtn:CreateTexture(nil, "ARTWORK")
@@ -402,6 +403,7 @@ local function CreateReputationView(parentFrame)
         GameTooltip:Show()
     end)
     toggleBtn:SetScript("OnLeave", function() GameTooltip_Hide() end)
+    container.RightSideToggleButton = toggleBtn
     
     -- Sync subPanel and vertical divider visibility with OnePanel master expand state
     if OnePanel then
@@ -635,7 +637,7 @@ local function CreateReputationView(parentFrame)
         if row then return row end
         
         row = CreateFrame("Button", "OnePanel_RepRow_" .. idx, listContent)
-        row:SetSize(318, 30)
+        row:SetSize(318, 38)
         
         -- Background
         local bg = row:CreateTexture(nil, "BACKGROUND")
@@ -660,7 +662,7 @@ local function CreateReputationView(parentFrame)
         
         -- Header Title (for Category rows)
         local headerText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        headerText:SetPoint("LEFT", row, "LEFT", 24, 0)
+        headerText:SetPoint("LEFT", row, "LEFT", 26, 0)
         headerText:SetJustifyH("LEFT")
         headerText:Hide()
         row.HeaderText = headerText
@@ -668,53 +670,56 @@ local function CreateReputationView(parentFrame)
         -- Header Toggle Icon ([+] / [-])
         local headerIcon = row:CreateTexture(nil, "OVERLAY")
         headerIcon:SetSize(14, 14)
-        headerIcon:SetPoint("LEFT", row, "LEFT", 6, 0)
+        headerIcon:SetPoint("LEFT", row, "LEFT", 8, 0)
         headerIcon:Hide()
         row.HeaderIcon = headerIcon
         
         -- Header Counts Badge
         local headerCount = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        headerCount:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+        headerCount:SetPoint("RIGHT", row, "RIGHT", -8, 0)
         headerCount:SetJustifyH("RIGHT")
         headerCount:Hide()
         row.HeaderCount = headerCount
         
         -- Faction Name
         local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        nameText:SetPoint("TOPLEFT", row, "TOPLEFT", 6, -3)
-        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -24, -3)
+        nameText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -4)
+        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -26, -4)
         nameText:SetJustifyH("LEFT")
         nameText:SetWordWrap(false)
+        nameText:SetTextColor(0.95, 0.95, 0.95, 1)
         row.NameText = nameText
         
         -- Status Progress Bar
         local bar = CreateFrame("StatusBar", nil, row)
-        bar:SetSize(306, 11)
-        bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 6, 3)
+        bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 5)
+        bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 5)
+        bar:SetHeight(14)
         bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
         
         local barBg = bar:CreateTexture(nil, "BACKGROUND")
         barBg:SetAllPoints(bar)
-        barBg:SetColorTexture(0.06, 0.06, 0.06, 0.9)
+        barBg:SetColorTexture(0.08, 0.08, 0.10, 0.9)
         
         local barText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         barText:SetPoint("CENTER", bar, "CENTER", 0, 0)
-        barText:SetFont(GameFontHighlightSmall:GetFont(), 9, "OUTLINE")
+        barText:SetFont(GameFontHighlightSmall:GetFont(), 10, "OUTLINE")
+        barText:SetTextColor(1, 1, 1, 1)
         
         row.Bar = bar
         row.BarText = barText
         
         -- Watched Star / Check Icon
         local watchedIcon = row:CreateTexture(nil, "OVERLAY")
-        watchedIcon:SetSize(12, 12)
-        watchedIcon:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -3)
+        watchedIcon:SetSize(14, 14)
+        watchedIcon:SetPoint("TOPRIGHT", row, "TOPRIGHT", -6, -4)
         watchedIcon:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
         watchedIcon:Hide()
         row.WatchedIcon = watchedIcon
         
         -- At War Swords Icon
         local atWarIcon = row:CreateTexture(nil, "OVERLAY")
-        atWarIcon:SetSize(12, 12)
+        atWarIcon:SetSize(14, 14)
         atWarIcon:SetPoint("RIGHT", watchedIcon, "LEFT", -2, 0)
         atWarIcon:SetTexture("Interface\\WorldStateFrame\\CombatIcon")
         atWarIcon:Hide()
@@ -778,8 +783,8 @@ local function CreateReputationView(parentFrame)
                     
                     if d.isHeader then
                         -- Render as Category Header
-                        row:SetHeight(24)
-                        row.Bg:SetColorTexture(0.14, 0.14, 0.16, 0.9)
+                        row:SetHeight(26)
+                        row.Bg:SetColorTexture(0.16, 0.16, 0.20, 0.95)
                         row.HeaderText:Show()
                         row.HeaderText:SetText(d.name)
                         
@@ -805,15 +810,15 @@ local function CreateReputationView(parentFrame)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 26
+                        yOffset = yOffset - 30
                     else
                         -- Render as Faction Row
-                        row:SetHeight(32)
+                        row:SetHeight(38)
                         
                         if rowIndex % 2 == 1 then
-                            row.Bg:SetColorTexture(0.08, 0.08, 0.10, 0.6)
+                            row.Bg:SetColorTexture(0.10, 0.10, 0.12, 0.7)
                         else
-                            row.Bg:SetColorTexture(0.04, 0.04, 0.06, 0.6)
+                            row.Bg:SetColorTexture(0.05, 0.05, 0.07, 0.7)
                         end
                         
                         row.HeaderText:Hide()
@@ -865,7 +870,7 @@ local function CreateReputationView(parentFrame)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 34
+                        yOffset = yOffset - 42
                     end
                     
                     row:Show()
