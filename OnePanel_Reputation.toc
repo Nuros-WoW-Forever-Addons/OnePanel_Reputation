@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: OnePanel |cff00ccffReputation|r
+## Notes: Faction reputation standing and progress tracking plugin for OnePanel Suite.
+## Author: OnePanel Suite Team
+## Version: 0.0.1
+## Dependencies: OnePanel, OnePanelUtils
+
+Core.lua
