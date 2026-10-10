@@ -910,7 +910,6 @@ local function RegisterReputationPlugin()
         title = "Reputation",
         order = 20, -- Sits directly beneath Character (order 10)
         icon = "Interface\\Icons\\Achievement_Reputation_01",
-        interceptNativeToggle = true,
         CreateView = CreateReputationView,
         OnShow = function(container)
             if OnePanel and OnePanel.SetTitleText then
