@@ -25,29 +25,54 @@ local STANDING_LABELS = {
     [8] = _G["FACTION_STANDING_LABEL8"] or "Exalted",
 }
 
-local STANDING_COLORS = {
-    [1] = { r = 0.80, g = 0.15, b = 0.15, hex = "cc2626" }, -- Hated (Dark Red)
-    [2] = { r = 0.95, g = 0.25, b = 0.25, hex = "f24040" }, -- Hostile (Red)
-    [3] = { r = 0.95, g = 0.55, b = 0.10, hex = "f28c1a" }, -- Unfriendly (Orange)
-    [4] = { r = 1.00, g = 0.85, b = 0.10, hex = "ffd91a" }, -- Neutral (Yellow)
-    [5] = { r = 0.20, g = 0.80, b = 0.20, hex = "33cc33" }, -- Friendly (Green)
-    [6] = { r = 0.00, g = 0.65, b = 0.95, hex = "00a6f2" }, -- Honored (Blue/Cyan)
-    [7] = { r = 0.65, g = 0.35, b = 0.95, hex = "a659f2" }, -- Revered (Purple)
-    [8] = { r = 0.00, g = 0.90, b = 0.70, hex = "00e6b3" }, -- Exalted (Teal/Aquamarine)
+-- Bright, vibrant text colors for standing labels displayed on dark backgrounds
+local STANDING_TEXT_COLORS = {
+    [1] = { r = 0.95, g = 0.25, b = 0.25, hex = "f24040" }, -- Hated (Red)
+    [2] = { r = 1.00, g = 0.35, b = 0.35, hex = "ff5959" }, -- Hostile (Red)
+    [3] = { r = 1.00, g = 0.65, b = 0.20, hex = "ffa633" }, -- Unfriendly (Orange)
+    [4] = { r = 1.00, g = 0.85, b = 0.20, hex = "ffd933" }, -- Neutral (Yellow/Gold)
+    [5] = { r = 0.30, g = 0.90, b = 0.30, hex = "4de64d" }, -- Friendly (Green)
+    [6] = { r = 0.20, g = 0.75, b = 1.00, hex = "33bfff" }, -- Honored (Blue)
+    [7] = { r = 0.75, g = 0.45, b = 1.00, hex = "bf73ff" }, -- Revered (Purple)
+    [8] = { r = 0.20, g = 0.95, b = 0.80, hex = "33f2cc" }, -- Exalted (Teal)
 }
 
+-- Rich, deeper tones calibrated specifically for progress bar fills to ensure
+-- pure white text and numbers maintain maximum readability and high contrast
+local BAR_FILL_COLORS = {
+    [1] = { r = 0.65, g = 0.10, b = 0.10 }, -- Hated (Deep Crimson)
+    [2] = { r = 0.75, g = 0.15, b = 0.15 }, -- Hostile (Dark Red)
+    [3] = { r = 0.75, g = 0.42, b = 0.08 }, -- Unfriendly (Rust Orange)
+    [4] = { r = 0.68, g = 0.52, b = 0.06 }, -- Neutral (Rich Amber Bronze - high contrast with white text!)
+    [5] = { r = 0.12, g = 0.52, b = 0.14 }, -- Friendly (Deep Forest Green)
+    [6] = { r = 0.08, g = 0.42, b = 0.72 }, -- Honored (Deep Cobalt Blue)
+    [7] = { r = 0.45, g = 0.18, b = 0.72 }, -- Revered (Deep Royal Purple)
+    [8] = { r = 0.00, g = 0.58, b = 0.48 }, -- Exalted (Deep Teal)
+}
+
+local function GetBarFillColor(standingID)
+    local c = BAR_FILL_COLORS[standingID] or BAR_FILL_COLORS[4]
+    return c.r, c.g, c.b
+end
+
 local function GetStandingColor(standingID)
-    if _G.FACTION_BAR_COLORS and _G.FACTION_BAR_COLORS[standingID] then
-        local c = _G.FACTION_BAR_COLORS[standingID]
-        return c.r or 1, c.g or 1, c.b or 1
-    end
-    local c = STANDING_COLORS[standingID] or STANDING_COLORS[4]
+    local c = STANDING_TEXT_COLORS[standingID] or STANDING_TEXT_COLORS[4]
     return c.r, c.g, c.b
 end
 
 local function GetStandingHex(standingID)
-    local c = STANDING_COLORS[standingID] or STANDING_COLORS[4]
+    local c = STANDING_TEXT_COLORS[standingID] or STANDING_TEXT_COLORS[4]
     return c.hex or "ffffff"
+end
+
+--- Resolve standard, clean sans-serif number font (Arial Narrow) for status bars
+local function GetStatusBarFont()
+    local fontObj = _G.TextStatusBarText or _G.NumberFontNormalSmall or _G.NumberFontNormal or _G.GameFontHighlightSmall
+    if fontObj and fontObj.GetFont then
+        local fontPath = fontObj:GetFont()
+        if fontPath and fontPath ~= "" then return fontPath end
+    end
+    return "Fonts\\ARIALN.TTF"
 end
 
 local function FormatNumber(value)
@@ -294,7 +319,7 @@ local function CreateReputationView(parentFrame)
     end)
     
     -- Exalted Counter Summary (Top Right)
-    local exaltedSummary = topBar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local exaltedSummary = topBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     exaltedSummary:SetPoint("RIGHT", topBar, "RIGHT", -2, 0)
     exaltedSummary:SetJustifyH("RIGHT")
     topBar.ExaltedSummary = exaltedSummary
@@ -307,7 +332,7 @@ local function CreateReputationView(parentFrame)
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
         local cur = self:GetVerticalScroll()
         local maxScroll = self:GetVerticalScrollRange()
-        local step = 42
+        local step = 46
         self:SetVerticalScroll(math.max(0, math.min(maxScroll, cur - (delta * step))))
     end)
     
@@ -317,21 +342,21 @@ local function CreateReputationView(parentFrame)
         scrollBar:ClearAllPoints()
         scrollBar:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", -2, -18)
         scrollBar:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -2, 18)
-        scrollBar:SetValueStep(42)
+        scrollBar:SetValueStep(46)
         
         local upBtn = _G[scrollBarName .. "ScrollUpButton"]
         local downBtn = _G[scrollBarName .. "ScrollDownButton"]
         if upBtn then
             upBtn:SetScript("OnClick", function()
                 local cur = scrollFrame:GetVerticalScroll()
-                scrollFrame:SetVerticalScroll(math.max(0, cur - 42))
+                scrollFrame:SetVerticalScroll(math.max(0, cur - 46))
             end)
         end
         if downBtn then
             downBtn:SetScript("OnClick", function()
                 local cur = scrollFrame:GetVerticalScroll()
                 local maxScroll = scrollFrame:GetVerticalScrollRange()
-                scrollFrame:SetVerticalScroll(math.min(maxScroll, cur + 42))
+                scrollFrame:SetVerticalScroll(math.min(maxScroll, cur + 46))
             end)
         end
     end
@@ -428,7 +453,7 @@ local function CreateReputationView(parentFrame)
     -- Sub-Panel Details Content Components
     ---------------------------------------------------------------------------
     
-    local detailHeader = subPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local detailHeader = subPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     detailHeader:SetPoint("TOPLEFT", subPanel, "TOPLEFT", 6, -6)
     detailHeader:SetPoint("TOPRIGHT", subPanel, "TOPRIGHT", -6, -6)
     detailHeader:SetJustifyH("CENTER")
@@ -437,36 +462,43 @@ local function CreateReputationView(parentFrame)
     
     -- Standing Badge Tag (e.g. "[ Revered ]" with colored text and background)
     local standingBadge = CreateFrame("Frame", nil, subPanel)
-    standingBadge:SetSize(180, 20)
+    standingBadge:SetSize(180, 22)
     standingBadge:SetPoint("TOP", detailHeader, "BOTTOM", 0, -6)
     
     local standingBadgeBg = standingBadge:CreateTexture(nil, "BACKGROUND")
     standingBadgeBg:SetAllPoints(standingBadge)
-    standingBadgeBg:SetColorTexture(0.12, 0.12, 0.14, 0.8)
+    standingBadgeBg:SetColorTexture(0.10, 0.10, 0.12, 0.85)
     
     local standingBadgeText = standingBadge:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     standingBadgeText:SetPoint("CENTER", standingBadge, "CENTER", 0, 0)
+    standingBadgeText:SetFont(GetStatusBarFont(), 13, "OUTLINE")
+    standingBadgeText:SetShadowOffset(1, -1)
+    standingBadgeText:SetShadowColor(0, 0, 0, 1)
     subPanel.StandingBadgeText = standingBadgeText
     
-    -- Detail Progress Bar
+    -- Detail Progress Bar (18px height, crisp number font)
     local detailBar = CreateFrame("StatusBar", nil, subPanel)
-    detailBar:SetSize(188, 16)
+    detailBar:SetSize(188, 18)
     detailBar:SetPoint("TOP", standingBadge, "BOTTOM", 0, -8)
     detailBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     
     local detailBarBg = detailBar:CreateTexture(nil, "BACKGROUND")
     detailBarBg:SetAllPoints(detailBar)
-    detailBarBg:SetColorTexture(0.08, 0.08, 0.08, 0.9)
+    detailBarBg:SetColorTexture(0.06, 0.06, 0.08, 0.95)
     
-    local detailBarText = detailBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local detailBarText = detailBar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     detailBarText:SetPoint("CENTER", detailBar, "CENTER", 0, 0)
+    detailBarText:SetFont(GetStatusBarFont(), 12, "OUTLINE")
+    detailBarText:SetShadowOffset(1, -1)
+    detailBarText:SetShadowColor(0, 0, 0, 1)
+    detailBarText:SetTextColor(1, 1, 1, 1)
     subPanel.DetailBar = detailBar
     subPanel.DetailBarText = detailBarText
     
-    -- Exact Numerical Progress Lines
-    local statsText = subPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    statsText:SetPoint("TOPLEFT", detailBar, "BOTTOMLEFT", 2, -6)
-    statsText:SetPoint("TOPRIGHT", detailBar, "BOTTOMRIGHT", -2, -6)
+    -- Exact Numerical Progress Lines (Clear 12pt text)
+    local statsText = subPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    statsText:SetPoint("TOPLEFT", detailBar, "BOTTOMLEFT", 2, -8)
+    statsText:SetPoint("TOPRIGHT", detailBar, "BOTTOMRIGHT", -2, -8)
     statsText:SetJustifyH("LEFT")
     subPanel.StatsText = statsText
     
@@ -480,10 +512,11 @@ local function CreateReputationView(parentFrame)
     descContent:SetSize(170, 200)
     descScroll:SetScrollChild(descContent)
     
-    local descText = descContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local descText = descContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     descText:SetPoint("TOPLEFT", descContent, "TOPLEFT", 2, -2)
     descText:SetWidth(164)
     descText:SetJustifyH("LEFT")
+    descText:SetTextColor(0.85, 0.85, 0.85, 1)
     subPanel.DescText = descText
     subPanel.DescContent = descContent
     
@@ -494,7 +527,7 @@ local function CreateReputationView(parentFrame)
     local watchLabel = _G[watchCheck:GetName() .. "Text"]
     if watchLabel then
         watchLabel:SetText("Show as Exp Bar")
-        watchLabel:SetFontObject("GameFontHighlightSmall")
+        watchLabel:SetFontObject("GameFontHighlight")
     end
     subPanel.WatchCheck = watchCheck
     
@@ -504,7 +537,7 @@ local function CreateReputationView(parentFrame)
     local atWarLabel = _G[atWarCheck:GetName() .. "Text"]
     if atWarLabel then
         atWarLabel:SetText("At War")
-        atWarLabel:SetFontObject("GameFontHighlightSmall")
+        atWarLabel:SetFontObject("GameFontHighlight")
     end
     subPanel.AtWarCheck = atWarCheck
     
@@ -514,7 +547,7 @@ local function CreateReputationView(parentFrame)
     local inactiveLabel = _G[inactiveCheck:GetName() .. "Text"]
     if inactiveLabel then
         inactiveLabel:SetText("Move to Inactive")
-        inactiveLabel:SetFontObject("GameFontHighlightSmall")
+        inactiveLabel:SetFontObject("GameFontHighlight")
     end
     subPanel.InactiveCheck = inactiveCheck
     
@@ -571,7 +604,8 @@ local function CreateReputationView(parentFrame)
         
         detailBar:SetMinMaxValues(0, maxRange)
         detailBar:SetValue(math.min(maxRange, currentVal))
-        detailBar:SetStatusBarColor(r, g, b, 1)
+        local barR, barG, barB = GetBarFillColor(data.standingID)
+        detailBar:SetStatusBarColor(barR, barG, barB, 1)
         
         local pct = math.min(100, math.floor((currentVal / maxRange) * 100))
         if isExalted and currentVal >= maxRange then
@@ -637,7 +671,7 @@ local function CreateReputationView(parentFrame)
         if row then return row end
         
         row = CreateFrame("Button", "OnePanel_RepRow_" .. idx, listContent)
-        row:SetSize(318, 38)
+        row:SetSize(318, 42)
         
         -- Background
         local bg = row:CreateTexture(nil, "BACKGROUND")
@@ -681,29 +715,38 @@ local function CreateReputationView(parentFrame)
         headerCount:Hide()
         row.HeaderCount = headerCount
         
-        -- Faction Name
-        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        -- Faction Name (12pt clean font)
+        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         nameText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -4)
-        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -26, -4)
+        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -110, -4)
         nameText:SetJustifyH("LEFT")
         nameText:SetWordWrap(false)
-        nameText:SetTextColor(0.95, 0.95, 0.95, 1)
+        nameText:SetTextColor(1, 1, 1, 1)
         row.NameText = nameText
         
-        -- Status Progress Bar
+        -- Standing Text Badge (Top line right, e.g. "[ Friendly ]")
+        local standingText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        standingText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -4)
+        standingText:SetJustifyH("RIGHT")
+        standingText:Hide()
+        row.StandingText = standingText
+        
+        -- Status Progress Bar (17px tall for maximum text legibility)
         local bar = CreateFrame("StatusBar", nil, row)
-        bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 5)
-        bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 5)
-        bar:SetHeight(14)
+        bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 4)
+        bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 4)
+        bar:SetHeight(17)
         bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
         
         local barBg = bar:CreateTexture(nil, "BACKGROUND")
         barBg:SetAllPoints(bar)
-        barBg:SetColorTexture(0.08, 0.08, 0.10, 0.9)
+        barBg:SetColorTexture(0.06, 0.06, 0.08, 0.95)
         
-        local barText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local barText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         barText:SetPoint("CENTER", bar, "CENTER", 0, 0)
-        barText:SetFont(GameFontHighlightSmall:GetFont(), 10, "OUTLINE")
+        barText:SetFont(GetStatusBarFont(), 12, "OUTLINE")
+        barText:SetShadowOffset(1, -1)
+        barText:SetShadowColor(0, 0, 0, 1)
         barText:SetTextColor(1, 1, 1, 1)
         
         row.Bar = bar
@@ -712,7 +755,6 @@ local function CreateReputationView(parentFrame)
         -- Watched Star / Check Icon
         local watchedIcon = row:CreateTexture(nil, "OVERLAY")
         watchedIcon:SetSize(14, 14)
-        watchedIcon:SetPoint("TOPRIGHT", row, "TOPRIGHT", -6, -4)
         watchedIcon:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
         watchedIcon:Hide()
         row.WatchedIcon = watchedIcon
@@ -720,7 +762,6 @@ local function CreateReputationView(parentFrame)
         -- At War Swords Icon
         local atWarIcon = row:CreateTexture(nil, "OVERLAY")
         atWarIcon:SetSize(14, 14)
-        atWarIcon:SetPoint("RIGHT", watchedIcon, "LEFT", -2, 0)
         atWarIcon:SetTexture("Interface\\WorldStateFrame\\CombatIcon")
         atWarIcon:Hide()
         row.AtWarIcon = atWarIcon
@@ -783,7 +824,7 @@ local function CreateReputationView(parentFrame)
                     
                     if d.isHeader then
                         -- Render as Category Header
-                        row:SetHeight(26)
+                        row:SetHeight(28)
                         row.Bg:SetColorTexture(0.16, 0.16, 0.20, 0.95)
                         row.HeaderText:Show()
                         row.HeaderText:SetText(d.name)
@@ -794,12 +835,13 @@ local function CreateReputationView(parentFrame)
                         local stats = categoryStats[d.name]
                         if stats and stats.total > 0 then
                             row.HeaderCount:Show()
-                            row.HeaderCount:SetText(string.format("|cffaaaaaa(%d/%d Exalted)|r", stats.exalted, stats.total))
+                            row.HeaderCount:SetText(string.format("|cffcccccc(%d/%d Exalted)|r", stats.exalted, stats.total))
                         else
                             row.HeaderCount:Hide()
                         end
                         
                         row.NameText:Hide()
+                        if row.StandingText then row.StandingText:Hide() end
                         row.Bar:Hide()
                         row.WatchedIcon:Hide()
                         row.AtWarIcon:Hide()
@@ -810,10 +852,10 @@ local function CreateReputationView(parentFrame)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 30
+                        yOffset = yOffset - 32
                     else
-                        -- Render as Faction Row
-                        row:SetHeight(38)
+                        -- Render as Faction Row (42px tall, high contrast)
+                        row:SetHeight(42)
                         
                         if rowIndex % 2 == 1 then
                             row.Bg:SetColorTexture(0.10, 0.10, 0.12, 0.7)
@@ -828,10 +870,14 @@ local function CreateReputationView(parentFrame)
                         row.NameText:Show()
                         row.NameText:SetText(d.name)
                         
-                        row.Bar:Show()
                         local standingName = STANDING_LABELS[d.standingID] or "Neutral"
-                        local r, g, b = GetStandingColor(d.standingID)
-                        row.Bar:SetStatusBarColor(r, g, b, 1)
+                        local hex = GetStandingHex(d.standingID)
+                        row.StandingText:Show()
+                        row.StandingText:SetText(string.format("|cff%s[ %s ]|r", hex, standingName))
+                        
+                        row.Bar:Show()
+                        local barR, barG, barB = GetBarFillColor(d.standingID)
+                        row.Bar:SetStatusBarColor(barR, barG, barB, 1)
                         
                         local barMin = d.barMin or 0
                         local barMax = d.barMax or 1
@@ -846,14 +892,32 @@ local function CreateReputationView(parentFrame)
                         
                         local isExalted = (d.standingID == 8)
                         if isExalted and currentVal >= maxRange then
-                            row.BarText:SetText(string.format("%s", standingName))
+                            row.BarText:SetText(string.format("%s / %s (Max)", FormatNumber(currentVal), FormatNumber(maxRange)))
                         else
                             local pct = math.min(100, math.floor((currentVal / maxRange) * 100))
-                            row.BarText:SetText(string.format("%s - %s / %s (%d%%)", standingName, FormatNumber(currentVal), FormatNumber(maxRange), pct))
+                            row.BarText:SetText(string.format("%s / %s (%d%%)", FormatNumber(currentVal), FormatNumber(maxRange), pct))
                         end
                         
-                        row.WatchedIcon:SetShown(d.isWatched == true)
-                        row.AtWarIcon:SetShown(d.atWarWith == true)
+                        -- Status icons layout
+                        if d.isWatched == true then
+                            row.WatchedIcon:ClearAllPoints()
+                            row.WatchedIcon:SetPoint("RIGHT", row.StandingText, "LEFT", -4, 0)
+                            row.WatchedIcon:Show()
+                        else
+                            row.WatchedIcon:Hide()
+                        end
+                        
+                        if d.atWarWith == true then
+                            row.AtWarIcon:ClearAllPoints()
+                            if d.isWatched == true then
+                                row.AtWarIcon:SetPoint("RIGHT", row.WatchedIcon, "LEFT", -2, 0)
+                            else
+                                row.AtWarIcon:SetPoint("RIGHT", row.StandingText, "LEFT", -4, 0)
+                            end
+                            row.AtWarIcon:Show()
+                        else
+                            row.AtWarIcon:Hide()
+                        end
                         
                         -- Selection match
                         if not selectedFactionID and rowIndex == 1 and not d.isHeader then
@@ -870,7 +934,7 @@ local function CreateReputationView(parentFrame)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 42
+                        yOffset = yOffset - 46
                     end
                     
                     row:Show()
