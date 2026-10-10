@@ -242,19 +242,19 @@ local function CreateReputationView(parentFrame)
     local leftArea = CreateFrame("Frame", "OnePanel_ReputationLeftArea", container)
     leftArea:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
     leftArea:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", 0, 0)
-    leftArea:SetWidth(348)
+    leftArea:SetWidth(338)
     container.LeftArea = leftArea
     
     -- Top Control Bar (Search Input + Expand/Collapse All + Summary)
     -- Positioned at y = -52 to completely clear the top-left circular portrait ring
     local topBar = CreateFrame("Frame", "OnePanel_ReputationTopBar", leftArea)
     topBar:SetPoint("TOPLEFT", leftArea, "TOPLEFT", 10, -52)
-    topBar:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -10, -52)
+    topBar:SetPoint("TOPRIGHT", leftArea, "TOPRIGHT", -12, -52)
     topBar:SetHeight(26)
     
     -- Search EditBox
     local searchBox = CreateFrame("EditBox", "OnePanel_ReputationSearchBox", topBar, "InputBoxTemplate")
-    searchBox:SetSize(140, 22)
+    searchBox:SetSize(130, 22)
     searchBox:SetPoint("LEFT", topBar, "LEFT", 2, 0)
     searchBox:SetAutoFocus(false)
     searchBox:SetMaxLetters(40)
@@ -297,7 +297,7 @@ local function CreateReputationView(parentFrame)
     
     -- Collapse / Expand All Button
     local toggleAllBtn = CreateSilverActionButton(topBar, "OnePanel_ReputationToggleAllBtn", "Collapse All")
-    toggleAllBtn:SetSize(86, 22)
+    toggleAllBtn:SetSize(82, 22)
     toggleAllBtn:SetPoint("LEFT", searchBox, "RIGHT", 6, 0)
     
     local allCollapsed = false
@@ -327,7 +327,7 @@ local function CreateReputationView(parentFrame)
     -- Scroll View Container for Factions
     local scrollFrame = CreateFrame("ScrollFrame", "OnePanel_ReputationScrollFrame", leftArea, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", topBar, "BOTTOMLEFT", 0, -8)
-    scrollFrame:SetPoint("BOTTOMRIGHT", leftArea, "BOTTOMRIGHT", -6, 8)
+    scrollFrame:SetPoint("BOTTOMRIGHT", leftArea, "BOTTOMRIGHT", -14, 10)
     scrollFrame:EnableMouseWheel(true)
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
         local cur = self:GetVerticalScroll()
@@ -362,7 +362,7 @@ local function CreateReputationView(parentFrame)
     end
     
     local listContent = CreateFrame("Frame", "OnePanel_ReputationListContent", scrollFrame)
-    listContent:SetSize(318, 400)
+    listContent:SetSize(288, 400)
     scrollFrame:SetScrollChild(listContent)
     listContent.rows = {}
     
@@ -371,9 +371,9 @@ local function CreateReputationView(parentFrame)
     ---------------------------------------------------------------------------
     
     local subPanel = CreateFrame("Frame", "OnePanel_ReputationSubPanel", container)
-    subPanel:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -12)
-    subPanel:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -10, 12)
-    subPanel:SetWidth(208)
+    subPanel:SetPoint("TOPRIGHT", container, "TOPRIGHT", -6, -12)
+    subPanel:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -6, 12)
+    subPanel:SetWidth(198)
     container.SubPanel = subPanel
     
     -- Vertical Metal Divider separating list from details
@@ -454,15 +454,15 @@ local function CreateReputationView(parentFrame)
     ---------------------------------------------------------------------------
     
     local detailHeader = subPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    detailHeader:SetPoint("TOPLEFT", subPanel, "TOPLEFT", 6, -6)
-    detailHeader:SetPoint("TOPRIGHT", subPanel, "TOPRIGHT", -6, -6)
+    detailHeader:SetPoint("TOPLEFT", subPanel, "TOPLEFT", 4, -6)
+    detailHeader:SetPoint("TOPRIGHT", subPanel, "TOPRIGHT", -4, -6)
     detailHeader:SetJustifyH("CENTER")
     detailHeader:SetWordWrap(true)
     subPanel.Header = detailHeader
     
     -- Standing Badge Tag (e.g. "[ Revered ]" with colored text and background)
     local standingBadge = CreateFrame("Frame", nil, subPanel)
-    standingBadge:SetSize(180, 22)
+    standingBadge:SetSize(174, 22)
     standingBadge:SetPoint("TOP", detailHeader, "BOTTOM", 0, -6)
     
     local standingBadgeBg = standingBadge:CreateTexture(nil, "BACKGROUND")
@@ -478,7 +478,7 @@ local function CreateReputationView(parentFrame)
     
     -- Detail Progress Bar (18px height, crisp number font)
     local detailBar = CreateFrame("StatusBar", nil, subPanel)
-    detailBar:SetSize(188, 18)
+    detailBar:SetSize(178, 18)
     detailBar:SetPoint("TOP", standingBadge, "BOTTOM", 0, -8)
     detailBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     
@@ -505,25 +505,25 @@ local function CreateReputationView(parentFrame)
     -- Scrollable Faction Description Box
     local descScroll = CreateFrame("ScrollFrame", "OnePanel_ReputationDescScroll", subPanel, "UIPanelScrollFrameTemplate")
     descScroll:SetPoint("TOPLEFT", statsText, "BOTTOMLEFT", 0, -10)
-    descScroll:SetPoint("BOTTOMRIGHT", subPanel, "BOTTOMRIGHT", -24, 82)
+    descScroll:SetPoint("BOTTOMRIGHT", subPanel, "BOTTOMRIGHT", -20, 84)
     descScroll:EnableMouseWheel(true)
     
     local descContent = CreateFrame("Frame", nil, descScroll)
-    descContent:SetSize(170, 200)
+    descContent:SetSize(158, 200)
     descScroll:SetScrollChild(descContent)
     
     local descText = descContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     descText:SetPoint("TOPLEFT", descContent, "TOPLEFT", 2, -2)
-    descText:SetWidth(164)
+    descText:SetWidth(152)
     descText:SetJustifyH("LEFT")
     descText:SetTextColor(0.85, 0.85, 0.85, 1)
     subPanel.DescText = descText
     subPanel.DescContent = descContent
     
-    -- Checkboxes: Watch on XP bar, At War, Make Inactive
+    -- Checkboxes: Watch on XP bar, At War, Make Inactive (Shifted right for clean alignment)
     local watchCheck = CreateFrame("CheckButton", "OnePanel_RepWatchCheck", subPanel, "UICheckButtonTemplate")
     watchCheck:SetSize(22, 22)
-    watchCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 6, 54)
+    watchCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 12, 54)
     local watchLabel = _G[watchCheck:GetName() .. "Text"]
     if watchLabel then
         watchLabel:SetText("Show as Exp Bar")
@@ -533,7 +533,7 @@ local function CreateReputationView(parentFrame)
     
     local atWarCheck = CreateFrame("CheckButton", "OnePanel_RepAtWarCheck", subPanel, "UICheckButtonTemplate")
     atWarCheck:SetSize(22, 22)
-    atWarCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 6, 30)
+    atWarCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 12, 30)
     local atWarLabel = _G[atWarCheck:GetName() .. "Text"]
     if atWarLabel then
         atWarLabel:SetText("At War")
@@ -543,7 +543,7 @@ local function CreateReputationView(parentFrame)
     
     local inactiveCheck = CreateFrame("CheckButton", "OnePanel_RepInactiveCheck", subPanel, "UICheckButtonTemplate")
     inactiveCheck:SetSize(22, 22)
-    inactiveCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 6, 6)
+    inactiveCheck:SetPoint("BOTTOMLEFT", subPanel, "BOTTOMLEFT", 12, 6)
     local inactiveLabel = _G[inactiveCheck:GetName() .. "Text"]
     if inactiveLabel then
         inactiveLabel:SetText("Move to Inactive")
@@ -671,7 +671,7 @@ local function CreateReputationView(parentFrame)
         if row then return row end
         
         row = CreateFrame("Button", "OnePanel_RepRow_" .. idx, listContent)
-        row:SetSize(318, 42)
+        row:SetSize(288, 42)
         
         -- Background
         local bg = row:CreateTexture(nil, "BACKGROUND")
@@ -718,7 +718,7 @@ local function CreateReputationView(parentFrame)
         -- Faction Name (12pt clean font)
         local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         nameText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -4)
-        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -110, -4)
+        nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -84, -4)
         nameText:SetJustifyH("LEFT")
         nameText:SetWordWrap(false)
         nameText:SetTextColor(1, 1, 1, 1)
