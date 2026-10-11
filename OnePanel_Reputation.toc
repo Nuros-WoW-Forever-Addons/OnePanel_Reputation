@@ -3,6 +3,7 @@
 ## Notes: Faction reputation standing and progress tracking plugin for OnePanel Suite.
 ## Author: OnePanel Suite Team
 ## Version: 0.0.1
+## IconTexture: Interface\Icons\Achievement_Reputation_01
 ## Dependencies: OnePanel, OnePanelUtils
 
 Core.lua
