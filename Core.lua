@@ -65,14 +65,108 @@ local function GetStandingHex(standingID)
     return c.hex or "ffffff"
 end
 
---- Resolve standard, clean sans-serif number font (Arial Narrow) for status bars
-local function GetStatusBarFont()
-    local fontObj = _G.TextStatusBarText or _G.NumberFontNormalSmall or _G.NumberFontNormal or _G.GameFontHighlightSmall
+local function GetStandardFont()
+    local fontObj = _G.GameFontHighlight or _G.SystemFont_Med1 or _G.GameFontNormal
     if fontObj and fontObj.GetFont then
         local fontPath = fontObj:GetFont()
         if fontPath and fontPath ~= "" then return fontPath end
     end
-    return "Fonts\\ARIALN.TTF"
+    return "Fonts\\FRIZQT__.TTF"
+end
+
+local function GetStatusBarFont()
+    return GetStandardFont()
+end
+
+local function SafeHasAtlas(atlasName)
+    if not atlasName then return false end
+    if C_Texture and C_Texture.GetAtlasInfo then
+        local ok, info = pcall(C_Texture.GetAtlasInfo, atlasName)
+        return ok and info ~= nil
+    end
+    return false
+end
+
+local function ApplyModernReputationBarTexture(bar, standingID)
+    if not bar then return end
+
+    local atlas = nil
+    local r, g, b = 1, 1, 1
+
+    if standingID == 8 then -- Exalted
+        if SafeHasAtlas("ui-castingbar-full-applyingcrafting") then
+            atlas = "ui-castingbar-full-applyingcrafting"
+        elseif SafeHasAtlas("ui-castingbar-filling-channel") then
+            atlas = "ui-castingbar-filling-channel"
+        end
+    elseif standingID == 7 then -- Revered (Royal Purple)
+        if SafeHasAtlas("common-stat-bar-white") then
+            atlas = "common-stat-bar-white"
+            r, g, b = 0.70, 0.35, 1.00
+        elseif SafeHasAtlas("ui-castingbar-filling-standard") then
+            atlas = "ui-castingbar-filling-standard"
+            r, g, b = 0.85, 0.45, 1.00
+        end
+    elseif standingID == 6 then -- Honored (Jade/Turquoise)
+        if SafeHasAtlas("ui-castingbar-filling-channel") then
+            atlas = "ui-castingbar-filling-channel"
+        end
+    elseif standingID == 5 then -- Friendly (Green)
+        if SafeHasAtlas("ui-castingbar-filling-applyingcrafting") then
+            atlas = "ui-castingbar-filling-applyingcrafting"
+        end
+    elseif standingID == 4 then -- Neutral (Amber Gold)
+        if SafeHasAtlas("ui-castingbar-filling-standard") then
+            atlas = "ui-castingbar-filling-standard"
+        end
+    elseif standingID == 3 then -- Unfriendly (Rust Orange)
+        if SafeHasAtlas("common-stat-bar-white") then
+            atlas = "common-stat-bar-white"
+            r, g, b = 1.00, 0.55, 0.15
+        elseif SafeHasAtlas("ui-castingbar-filling-standard") then
+            atlas = "ui-castingbar-filling-standard"
+            r, g, b = 1.00, 0.60, 0.20
+        end
+    else -- Hated / Hostile (Crimson Red)
+        if SafeHasAtlas("common-stat-bar-white") then
+            atlas = "common-stat-bar-white"
+            r, g, b = 0.95, 0.22, 0.22
+        elseif SafeHasAtlas("ui-castingbar-filling-standard") then
+            atlas = "ui-castingbar-filling-standard"
+            r, g, b = 1.00, 0.30, 0.30
+        end
+    end
+
+    if not atlas then
+        if SafeHasAtlas("ui-castingbar-filling-standard") then
+            atlas = "ui-castingbar-filling-standard"
+        elseif SafeHasAtlas("common-stat-bar-white") then
+            atlas = "common-stat-bar-white"
+        end
+    end
+
+    if atlas then
+        pcall(bar.SetStatusBarTexture, bar, atlas)
+        bar:SetStatusBarColor(r, g, b, 1)
+    else
+        bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        local br, bg, bb = GetBarFillColor(standingID)
+        bar:SetStatusBarColor(br, bg, bb, 1)
+    end
+end
+
+local function UpdateStatusBarSpark(bar, currentVal, maxRange)
+    if not bar or not bar.Spark then return end
+    if not maxRange or maxRange <= 0 then maxRange = 1 end
+
+    local pct = math.min(1, math.max(0, (currentVal or 0) / maxRange))
+    if pct > 0.02 and pct < 0.98 then
+        bar.Spark:ClearAllPoints()
+        bar.Spark:SetPoint("CENTER", bar, "LEFT", bar:GetWidth() * pct, 0)
+        bar.Spark:Show()
+    else
+        bar.Spark:Hide()
+    end
 end
 
 local function FormatNumber(value)
@@ -213,13 +307,17 @@ local function CreateSilverActionButton(parent, name, text)
     if Utils and Utils.FrameHelper and Utils.FrameHelper.CreateSilverButton then
         btn = Utils.FrameHelper:CreateSilverButton(parent, name, text)
     else
-        btn = CreateFrame("Button", name, parent)
-        if btn.SetNormalFontObject then btn:SetNormalFontObject("GameFontHighlightSmall") end
-        if btn.SetDisabledFontObject then btn:SetDisabledFontObject("GameFontDisableSmall") end
+        btn = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
         if text then btn:SetText(text) end
         if Utils and Utils.FrameHelper and Utils.FrameHelper.StyleButtonAsMetal then
             Utils.FrameHelper:StyleButtonAsMetal(btn)
         end
+    end
+    local fontStr = btn:GetFontString()
+    if fontStr then
+        fontStr:SetFont(GetStandardFont(), 12, "")
+        fontStr:SetShadowOffset(1, -1)
+        fontStr:SetShadowColor(0, 0, 0, 1)
     end
     return btn
 end
@@ -254,13 +352,20 @@ local function CreateReputationView(parentFrame)
     
     -- Search EditBox
     local searchBox = CreateFrame("EditBox", "OnePanel_ReputationSearchBox", topBar, "InputBoxTemplate")
-    searchBox:SetSize(130, 22)
+    searchBox:SetSize(130, 24)
     searchBox:SetPoint("LEFT", topBar, "LEFT", 2, 0)
     searchBox:SetAutoFocus(false)
     searchBox:SetMaxLetters(40)
+    searchBox:SetFont(GetStandardFont(), 13, "")
+    searchBox:SetShadowOffset(1, -1)
+    searchBox:SetShadowColor(0, 0, 0, 1)
     
-    local searchHint = searchBox:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local searchHint = searchBox:CreateFontString(nil, "OVERLAY")
     searchHint:SetPoint("LEFT", searchBox, "LEFT", 4, 0)
+    searchHint:SetFont(GetStandardFont(), 13, "")
+    searchHint:SetTextColor(0.5, 0.5, 0.5, 1)
+    searchHint:SetShadowOffset(1, -1)
+    searchHint:SetShadowColor(0, 0, 0, 1)
     searchHint:SetText("Search factions...")
     searchBox.Hint = searchHint
     
@@ -297,7 +402,7 @@ local function CreateReputationView(parentFrame)
     
     -- Collapse / Expand All Button
     local toggleAllBtn = CreateSilverActionButton(topBar, "OnePanel_ReputationToggleAllBtn", "Collapse All")
-    toggleAllBtn:SetSize(82, 22)
+    toggleAllBtn:SetSize(88, 24)
     toggleAllBtn:SetPoint("LEFT", searchBox, "RIGHT", 6, 0)
     
     local allCollapsed = false
@@ -319,9 +424,12 @@ local function CreateReputationView(parentFrame)
     end)
     
     -- Exalted Counter Summary (Top Right)
-    local exaltedSummary = topBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local exaltedSummary = topBar:CreateFontString(nil, "OVERLAY")
     exaltedSummary:SetPoint("RIGHT", topBar, "RIGHT", -2, 0)
     exaltedSummary:SetJustifyH("RIGHT")
+    exaltedSummary:SetFont(GetStandardFont(), 13, "")
+    exaltedSummary:SetShadowOffset(1, -1)
+    exaltedSummary:SetShadowColor(0, 0, 0, 1)
     topBar.ExaltedSummary = exaltedSummary
     
     -- Scroll View Container for Factions
@@ -453,11 +561,15 @@ local function CreateReputationView(parentFrame)
     -- Sub-Panel Details Content Components
     ---------------------------------------------------------------------------
     
-    local detailHeader = subPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local detailHeader = subPanel:CreateFontString(nil, "OVERLAY")
     detailHeader:SetPoint("TOPLEFT", subPanel, "TOPLEFT", 4, -6)
     detailHeader:SetPoint("TOPRIGHT", subPanel, "TOPRIGHT", -4, -6)
     detailHeader:SetJustifyH("CENTER")
     detailHeader:SetWordWrap(true)
+    detailHeader:SetFont(GetStandardFont(), 17, "")
+    detailHeader:SetTextColor(1, 0.82, 0, 1)
+    detailHeader:SetShadowOffset(1, -1)
+    detailHeader:SetShadowColor(0, 0, 0, 1)
     subPanel.Header = detailHeader
     
     -- Standing Badge Tag (e.g. "[ Revered ]" with colored text and background)
@@ -469,37 +581,66 @@ local function CreateReputationView(parentFrame)
     standingBadgeBg:SetAllPoints(standingBadge)
     standingBadgeBg:SetColorTexture(0.10, 0.10, 0.12, 0.85)
     
-    local standingBadgeText = standingBadge:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local standingBadgeText = standingBadge:CreateFontString(nil, "OVERLAY")
     standingBadgeText:SetPoint("CENTER", standingBadge, "CENTER", 0, 0)
-    standingBadgeText:SetFont(GetStatusBarFont(), 13, "OUTLINE")
+    standingBadgeText:SetFont(GetStandardFont(), 13, "")
     standingBadgeText:SetShadowOffset(1, -1)
     standingBadgeText:SetShadowColor(0, 0, 0, 1)
     subPanel.StandingBadgeText = standingBadgeText
     
-    -- Detail Progress Bar (18px height, crisp number font)
+    -- Detail Progress Bar (24px height, modern cast bar styling)
     local detailBar = CreateFrame("StatusBar", nil, subPanel)
-    detailBar:SetSize(178, 18)
+    detailBar:SetSize(178, 24)
     detailBar:SetPoint("TOP", standingBadge, "BOTTOM", 0, -8)
-    detailBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     
-    local detailBarBg = detailBar:CreateTexture(nil, "BACKGROUND")
+    local detailBarBg = detailBar:CreateTexture(nil, "BACKGROUND", nil, -2)
     detailBarBg:SetAllPoints(detailBar)
-    detailBarBg:SetColorTexture(0.06, 0.06, 0.08, 0.95)
+    if SafeHasAtlas("ui-castingbar-background") then
+        detailBarBg:SetAtlas("ui-castingbar-background")
+    else
+        detailBarBg:SetColorTexture(0.04, 0.04, 0.06, 0.95)
+    end
+    detailBar.Bg = detailBarBg
     
-    local detailBarText = detailBar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local detailBarBorder = detailBar:CreateTexture(nil, "OVERLAY", nil, 1)
+    detailBarBorder:SetPoint("TOPLEFT", detailBar, "TOPLEFT", -2, 2)
+    detailBarBorder:SetPoint("BOTTOMRIGHT", detailBar, "BOTTOMRIGHT", 2, -2)
+    if SafeHasAtlas("ui-castingbar-frame") then
+        detailBarBorder:SetAtlas("ui-castingbar-frame")
+    else
+        detailBarBorder:SetColorTexture(0.20, 0.18, 0.15, 0.9)
+    end
+    detailBar.Border = detailBarBorder
+    
+    local detailSpark = detailBar:CreateTexture(nil, "OVERLAY", nil, 2)
+    detailSpark:SetSize(8, 24)
+    if SafeHasAtlas("ui-castingbar-pip") then
+        detailSpark:SetAtlas("ui-castingbar-pip")
+    else
+        detailSpark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+        detailSpark:SetBlendMode("ADD")
+    end
+    detailSpark:Hide()
+    detailBar.Spark = detailSpark
+    
+    local detailBarText = detailBar:CreateFontString(nil, "OVERLAY", nil, 3)
     detailBarText:SetPoint("CENTER", detailBar, "CENTER", 0, 0)
-    detailBarText:SetFont(GetStatusBarFont(), 12, "OUTLINE")
+    detailBarText:SetFont(GetStandardFont(), 13, "")
     detailBarText:SetShadowOffset(1, -1)
     detailBarText:SetShadowColor(0, 0, 0, 1)
     detailBarText:SetTextColor(1, 1, 1, 1)
     subPanel.DetailBar = detailBar
     subPanel.DetailBarText = detailBarText
     
-    -- Exact Numerical Progress Lines (Clear 12pt text)
-    local statsText = subPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    -- Exact Numerical Progress Lines (Clear 13pt text)
+    local statsText = subPanel:CreateFontString(nil, "OVERLAY")
     statsText:SetPoint("TOPLEFT", detailBar, "BOTTOMLEFT", 2, -8)
     statsText:SetPoint("TOPRIGHT", detailBar, "BOTTOMRIGHT", -2, -8)
     statsText:SetJustifyH("LEFT")
+    statsText:SetFont(GetStandardFont(), 13, "")
+    statsText:SetSpacing(4)
+    statsText:SetShadowOffset(1, -1)
+    statsText:SetShadowColor(0, 0, 0, 1)
     subPanel.StatsText = statsText
     
     -- Scrollable Faction Description Box
@@ -512,11 +653,15 @@ local function CreateReputationView(parentFrame)
     descContent:SetSize(158, 200)
     descScroll:SetScrollChild(descContent)
     
-    local descText = descContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local descText = descContent:CreateFontString(nil, "OVERLAY")
     descText:SetPoint("TOPLEFT", descContent, "TOPLEFT", 2, -2)
     descText:SetWidth(152)
     descText:SetJustifyH("LEFT")
-    descText:SetTextColor(0.85, 0.85, 0.85, 1)
+    descText:SetFont(GetStandardFont(), 13, "")
+    descText:SetSpacing(3)
+    descText:SetTextColor(0.90, 0.90, 0.90, 1)
+    descText:SetShadowOffset(1, -1)
+    descText:SetShadowColor(0, 0, 0, 1)
     subPanel.DescText = descText
     subPanel.DescContent = descContent
     
@@ -527,7 +672,9 @@ local function CreateReputationView(parentFrame)
     local watchLabel = _G[watchCheck:GetName() .. "Text"]
     if watchLabel then
         watchLabel:SetText("Show as Exp Bar")
-        watchLabel:SetFontObject("GameFontHighlight")
+        watchLabel:SetFont(GetStandardFont(), 13, "")
+        watchLabel:SetShadowOffset(1, -1)
+        watchLabel:SetShadowColor(0, 0, 0, 1)
     end
     subPanel.WatchCheck = watchCheck
     
@@ -537,7 +684,9 @@ local function CreateReputationView(parentFrame)
     local atWarLabel = _G[atWarCheck:GetName() .. "Text"]
     if atWarLabel then
         atWarLabel:SetText("At War")
-        atWarLabel:SetFontObject("GameFontHighlight")
+        atWarLabel:SetFont(GetStandardFont(), 13, "")
+        atWarLabel:SetShadowOffset(1, -1)
+        atWarLabel:SetShadowColor(0, 0, 0, 1)
     end
     subPanel.AtWarCheck = atWarCheck
     
@@ -547,13 +696,18 @@ local function CreateReputationView(parentFrame)
     local inactiveLabel = _G[inactiveCheck:GetName() .. "Text"]
     if inactiveLabel then
         inactiveLabel:SetText("Move to Inactive")
-        inactiveLabel:SetFontObject("GameFontHighlight")
+        inactiveLabel:SetFont(GetStandardFont(), 13, "")
+        inactiveLabel:SetShadowOffset(1, -1)
+        inactiveLabel:SetShadowColor(0, 0, 0, 1)
     end
     subPanel.InactiveCheck = inactiveCheck
     
     -- Empty Details Placeholder (Shown when no faction is selected)
-    local emptyDetailText = subPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local emptyDetailText = subPanel:CreateFontString(nil, "OVERLAY")
     emptyDetailText:SetPoint("CENTER", subPanel, "CENTER", 0, 0)
+    emptyDetailText:SetFont(GetStandardFont(), 13, "")
+    emptyDetailText:SetShadowOffset(1, -1)
+    emptyDetailText:SetShadowColor(0, 0, 0, 1)
     emptyDetailText:SetText("|cff888888Select a faction\nto view details.|r")
     subPanel.EmptyText = emptyDetailText
     
@@ -585,10 +739,9 @@ local function CreateReputationView(parentFrame)
         atWarCheck:Show()
         inactiveCheck:Show()
         
-        detailHeader:SetText(string.format("|cffffcc00%s|r", data.name))
+        detailHeader:SetText(data.name)
         
         local standingName = STANDING_LABELS[data.standingID] or "Neutral"
-        local r, g, b = GetStandingColor(data.standingID)
         local hex = GetStandingHex(data.standingID)
         standingBadgeText:SetText(string.format("|cff%s[ %s ]|r", hex, standingName))
         
@@ -604,12 +757,12 @@ local function CreateReputationView(parentFrame)
         
         detailBar:SetMinMaxValues(0, maxRange)
         detailBar:SetValue(math.min(maxRange, currentVal))
-        local barR, barG, barB = GetBarFillColor(data.standingID)
-        detailBar:SetStatusBarColor(barR, barG, barB, 1)
+        ApplyModernReputationBarTexture(detailBar, data.standingID)
+        UpdateStatusBarSpark(detailBar, currentVal, maxRange)
         
         local pct = math.min(100, math.floor((currentVal / maxRange) * 100))
         if isExalted and currentVal >= maxRange then
-            detailBarText:SetText(string.format("%s (Max)", standingName))
+            detailBarText:SetText(string.format("%s / %s (Max)", FormatNumber(currentVal), FormatNumber(maxRange)))
             statsText:SetText(string.format(
                 "|cffccccccCurrent:|r |cffffffff%s|r\n|cff00e6b3Maximum reputation achieved!|r",
                 FormatNumber(currentVal)
@@ -671,19 +824,21 @@ local function CreateReputationView(parentFrame)
         if row then return row end
         
         row = CreateFrame("Button", "OnePanel_RepRow_" .. idx, listContent)
-        row:SetSize(288, 42)
+        row:SetSize(288, 44)
         
         -- Background
         local bg = row:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(row)
+        bg:SetColorTexture(0.06, 0.06, 0.08, 0.7)
         row.Bg = bg
         
         -- Highlight Overlay
         local hl = row:CreateTexture(nil, "HIGHLIGHT")
         hl:SetTexture("Interface\\Buttons\\UI-Listbox-Highlight")
         hl:SetBlendMode("ADD")
-        hl:SetAlpha(0.2)
+        hl:SetAlpha(0.25)
         hl:SetAllPoints(row)
+        row.Highlight = hl
         
         -- Selected Overlay
         local sel = row:CreateTexture(nil, "BACKGROUND", nil, 1)
@@ -694,57 +849,84 @@ local function CreateReputationView(parentFrame)
         sel:Hide()
         row.SelectedHighlight = sel
         
-        -- Header Title (for Category rows)
-        local headerText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        headerText:SetPoint("LEFT", row, "LEFT", 26, 0)
-        headerText:SetJustifyH("LEFT")
-        headerText:Hide()
-        row.HeaderText = headerText
+        -- Header Button (matches Character Stats button banner style with centered text)
+        local headerBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+        headerBtn:SetAllPoints(row)
+        headerBtn:Disable()
+        headerBtn:Hide()
+        if headerBtn.SetDisabledFontObject then
+            headerBtn:SetDisabledFontObject("GameFontNormal")
+        end
+        local hFont = headerBtn:GetFontString()
+        if hFont then
+            hFont:SetFont(GetStandardFont(), 13, "")
+            hFont:SetTextColor(1, 0.85, 0.1, 1)
+            hFont:SetShadowOffset(1, -1)
+            hFont:SetShadowColor(0, 0, 0, 1)
+        end
+        row.HeaderButton = headerBtn
         
-        -- Header Toggle Icon ([+] / [-])
-        local headerIcon = row:CreateTexture(nil, "OVERLAY")
-        headerIcon:SetSize(14, 14)
-        headerIcon:SetPoint("LEFT", row, "LEFT", 8, 0)
-        headerIcon:Hide()
-        row.HeaderIcon = headerIcon
-        
-        -- Header Counts Badge
-        local headerCount = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        headerCount:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-        headerCount:SetJustifyH("RIGHT")
-        headerCount:Hide()
-        row.HeaderCount = headerCount
-        
-        -- Faction Name (12pt clean font)
-        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        -- Faction Name (14pt clean font matching Skills)
+        local nameText = row:CreateFontString(nil, "ARTWORK")
         nameText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -4)
         nameText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -84, -4)
         nameText:SetJustifyH("LEFT")
         nameText:SetWordWrap(false)
-        nameText:SetTextColor(1, 1, 1, 1)
+        nameText:SetFont(GetStandardFont(), 14, "")
+        nameText:SetShadowOffset(1, -1)
+        nameText:SetShadowColor(0, 0, 0, 1)
+        nameText:SetTextColor(0.95, 0.95, 0.95, 1)
         row.NameText = nameText
         
         -- Standing Text Badge (Top line right, e.g. "[ Friendly ]")
-        local standingText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local standingText = row:CreateFontString(nil, "ARTWORK")
         standingText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -4)
         standingText:SetJustifyH("RIGHT")
+        standingText:SetFont(GetStandardFont(), 13, "")
+        standingText:SetShadowOffset(1, -1)
+        standingText:SetShadowColor(0, 0, 0, 1)
         standingText:Hide()
         row.StandingText = standingText
         
-        -- Status Progress Bar (17px tall for maximum text legibility)
+        -- Modern Gradient Status Bar (20px tall, cast bar frame, bg, spark, text)
         local bar = CreateFrame("StatusBar", nil, row)
         bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 4)
         bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -8, 4)
-        bar:SetHeight(17)
-        bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        bar:SetHeight(20)
         
-        local barBg = bar:CreateTexture(nil, "BACKGROUND")
+        local barBg = bar:CreateTexture(nil, "BACKGROUND", nil, -2)
         barBg:SetAllPoints(bar)
-        barBg:SetColorTexture(0.06, 0.06, 0.08, 0.95)
+        if SafeHasAtlas("ui-castingbar-background") then
+            barBg:SetAtlas("ui-castingbar-background")
+        else
+            barBg:SetColorTexture(0.04, 0.04, 0.06, 0.95)
+        end
+        bar.Bg = barBg
         
-        local barText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        local barBorder = bar:CreateTexture(nil, "OVERLAY", nil, 1)
+        barBorder:SetPoint("TOPLEFT", bar, "TOPLEFT", -2, 2)
+        barBorder:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 2, -2)
+        if SafeHasAtlas("ui-castingbar-frame") then
+            barBorder:SetAtlas("ui-castingbar-frame")
+        else
+            barBorder:SetColorTexture(0.20, 0.18, 0.15, 0.9)
+        end
+        bar.Border = barBorder
+        
+        local spark = bar:CreateTexture(nil, "OVERLAY", nil, 2)
+        spark:SetSize(8, 20)
+        if SafeHasAtlas("ui-castingbar-pip") then
+            spark:SetAtlas("ui-castingbar-pip")
+        else
+            spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+            spark:SetBlendMode("ADD")
+        end
+        spark:Hide()
+        bar.Spark = spark
+        
+        local barText = bar:CreateFontString(nil, "OVERLAY", nil, 3)
         barText:SetPoint("CENTER", bar, "CENTER", 0, 0)
-        barText:SetFont(GetStatusBarFont(), 12, "OUTLINE")
+        barText:SetFont(GetStandardFont(), 13, "")
         barText:SetShadowOffset(1, -1)
         barText:SetShadowColor(0, 0, 0, 1)
         barText:SetTextColor(1, 1, 1, 1)
@@ -823,49 +1005,64 @@ local function CreateReputationView(parentFrame)
                     row:SetPoint("TOPLEFT", listContent, "TOPLEFT", 1, yOffset)
                     
                     if d.isHeader then
-                        -- Render as Category Header
-                        row:SetHeight(28)
-                        row.Bg:SetColorTexture(0.16, 0.16, 0.20, 0.95)
-                        row.HeaderText:Show()
-                        row.HeaderText:SetText(d.name)
-                        
-                        row.HeaderIcon:Show()
-                        row.HeaderIcon:SetTexture(d.isCollapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
-                        
-                        local stats = categoryStats[d.name]
-                        if stats and stats.total > 0 then
-                            row.HeaderCount:Show()
-                            row.HeaderCount:SetText(string.format("|cffcccccc(%d/%d Exalted)|r", stats.exalted, stats.total))
-                        else
-                            row.HeaderCount:Hide()
+                        -- Render as Category Header Button (Grey metal button banner)
+                        if rowIndex > 1 then
+                            yOffset = yOffset - 4
                         end
+                        row:SetHeight(26)
                         
+                        row.Bg:Hide()
+                        if row.Highlight then row.Highlight:Hide() end
+                        row.SelectedHighlight:Hide()
                         row.NameText:Hide()
-                        if row.StandingText then row.StandingText:Hide() end
+                        row.StandingText:Hide()
                         row.Bar:Hide()
                         row.WatchedIcon:Hide()
                         row.AtWarIcon:Hide()
-                        row.SelectedHighlight:Hide()
                         
+                        local headerBtn = row.HeaderButton
+                        headerBtn:Show()
+                        headerBtn:SetAllPoints(row)
+                        headerBtn:SetHeight(26)
+                        
+                        local stats = categoryStats[d.name]
+                        if stats and stats.total > 0 then
+                            headerBtn:SetText(string.format("%s   (%d/%d Exalted)", d.name, stats.exalted, stats.total))
+                        else
+                            headerBtn:SetText(d.name)
+                        end
+                        headerBtn:Disable()
+                        headerBtn:EnableMouse(true)
+                        
+                        local headerIndex = d.index
+                        local wasCollapsed = d.isCollapsed
+                        headerBtn:SetScript("OnMouseUp", function(self, button)
+                            if button == "LeftButton" then
+                                SafeToggleHeader(headerIndex, wasCollapsed)
+                                RefreshList()
+                            end
+                        end)
                         row:SetScript("OnClick", function()
-                            SafeToggleHeader(d.index, d.isCollapsed)
+                            SafeToggleHeader(headerIndex, wasCollapsed)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 32
+                        row:Show()
+                        rowIndex = rowIndex + 1
+                        yOffset = yOffset - 30
                     else
-                        -- Render as Faction Row (42px tall, high contrast)
-                        row:SetHeight(42)
+                        -- Render as Faction Row (44px tall, high contrast gradient bar)
+                        row:SetHeight(44)
+                        row.HeaderButton:Hide()
                         
+                        row.Bg:Show()
                         if rowIndex % 2 == 1 then
                             row.Bg:SetColorTexture(0.10, 0.10, 0.12, 0.7)
                         else
                             row.Bg:SetColorTexture(0.05, 0.05, 0.07, 0.7)
                         end
                         
-                        row.HeaderText:Hide()
-                        row.HeaderIcon:Hide()
-                        row.HeaderCount:Hide()
+                        if row.Highlight then row.Highlight:Show() end
                         
                         row.NameText:Show()
                         row.NameText:SetText(d.name)
@@ -876,9 +1073,6 @@ local function CreateReputationView(parentFrame)
                         row.StandingText:SetText(string.format("|cff%s[ %s ]|r", hex, standingName))
                         
                         row.Bar:Show()
-                        local barR, barG, barB = GetBarFillColor(d.standingID)
-                        row.Bar:SetStatusBarColor(barR, barG, barB, 1)
-                        
                         local barMin = d.barMin or 0
                         local barMax = d.barMax or 1
                         local barValue = d.barValue or 0
@@ -889,6 +1083,9 @@ local function CreateReputationView(parentFrame)
                         
                         row.Bar:SetMinMaxValues(0, maxRange)
                         row.Bar:SetValue(math.min(maxRange, currentVal))
+                        
+                        ApplyModernReputationBarTexture(row.Bar, d.standingID)
+                        UpdateStatusBarSpark(row.Bar, currentVal, maxRange)
                         
                         local isExalted = (d.standingID == 8)
                         if isExalted and currentVal >= maxRange then
@@ -926,7 +1123,12 @@ local function CreateReputationView(parentFrame)
                         
                         local isSelected = (selectedFactionID == (d.factionID or d.index))
                         row.SelectedHighlight:SetShown(isSelected)
-                        if isSelected then selectedData = d end
+                        if isSelected then
+                            row.NameText:SetTextColor(1, 0.85, 0.2, 1)
+                            selectedData = d
+                        else
+                            row.NameText:SetTextColor(0.95, 0.95, 0.95, 1)
+                        end
                         
                         row:SetScript("OnClick", function()
                             selectedFactionID = d.factionID or d.index
@@ -934,11 +1136,10 @@ local function CreateReputationView(parentFrame)
                             RefreshList()
                         end)
                         
-                        yOffset = yOffset - 46
+                        row:Show()
+                        rowIndex = rowIndex + 1
+                        yOffset = yOffset - 48
                     end
-                    
-                    row:Show()
-                    rowIndex = rowIndex + 1
                 end
             end
         end

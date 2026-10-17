@@ -2,7 +2,7 @@
 ## Title: OnePanel |cff00ccffReputation|r
 ## Notes: Faction reputation standing and progress tracking plugin for OnePanel Suite.
 ## Author: OnePanel Suite Team
-## Version: 0.0.1
+## Version: 0.0.2
 ## IconTexture: Interface\Icons\Achievement_Reputation_01
 ## Dependencies: OnePanel, OnePanelUtils
 
